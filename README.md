@@ -8,6 +8,7 @@ TL;DR: Python implementation for low-level disk (and disk images) reading, parse
 
 ```python
 from hashlib import sha1
+from reader import FileReader
 
 with open("images/floppy2.img", "rb") as f:
     img = FAT12Reader(FileReader(f))
