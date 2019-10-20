@@ -26,7 +26,7 @@ class FATEntryNonFile(FATEntryError):
 
 
 def not_implemented():
-    NotImplementedError("Not implemented")
+    return NotImplementedError("Not implemented")
 
 
 class FATTable:
