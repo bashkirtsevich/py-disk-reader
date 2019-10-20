@@ -1,5 +1,5 @@
 from functools import reduce
-from itertools import accumulate, takewhile
+from itertools import accumulate, takewhile, repeat
 
 from reader import Reader
 from utils import decode_sfn, decode_lfn, groupby
@@ -55,7 +55,7 @@ class FATTable:
         return takewhile(
             lambda c: not self._is_eof(c),
             accumulate(
-                iter(lambda: idx, None),
+                repeat(idx),
                 lambda a, _: self[a]
             )
         )
