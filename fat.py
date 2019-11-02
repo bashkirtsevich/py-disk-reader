@@ -97,8 +97,9 @@ class FATEntryReader(Reader):
 
 
 class FATEntry:
-    def __init__(self, reader, table, cluster_size, params, data_ptr, lfn=None):
-        self.reader = reader
+    def __init__(self, basic_reader, entry_reader, table, cluster_size, params, data_ptr, lfn=None):
+        self.basic_reader = basic_reader
+        self.reader = entry_reader
         self.table = table
         self.cluster_size = cluster_size
         self.params = params
@@ -159,11 +160,12 @@ class FATEntry:
 
 
 class FATDir:
-    def __init__(self, table, reader, base_ptr, size, cluster_size, data_ptr):
+    def __init__(self, table, basic_reader, entry_reader, base_ptr, size, cluster_size, data_ptr):
         self.table = table
-        self.reader = reader
+        self.basic_reader = basic_reader
+        self.entry_reader = entry_reader
         self.base_ptr = base_ptr
-        self.size = size
+        self.size = size  # FIXME: self.size = size or reader.size()
         self.cluster_size = cluster_size
         self.data_ptr = data_ptr
 
@@ -185,7 +187,8 @@ class FATDir:
     def __iter__(self):
         return map(
             lambda g: self._get_entry_class()(
-                self.reader,
+                self.basic_reader,
+                self.entry_reader,
                 self.table,
                 self.cluster_size,
                 g[-1],
@@ -213,7 +216,7 @@ class FATDir:
                             map(lambda s: s[0] != 0, (i.Name, i.Ext))
                         ),
                         map(lambda i: self._parse_entry(
-                            self.reader.read(self._get_entry_size(), i * self._get_entry_size(), self.base_ptr)),
+                            self.entry_reader.read(self._get_entry_size(), i * self._get_entry_size(), self.base_ptr)),
                             range(int(self.size // self._get_entry_size())))
                     )
                 )
