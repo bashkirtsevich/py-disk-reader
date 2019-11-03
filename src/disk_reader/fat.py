@@ -1,8 +1,8 @@
 from functools import reduce
 from itertools import accumulate, takewhile, repeat
 
-from reader import Reader
-from utils import decode_sfn, decode_lfn, groupby
+from disk_reader.reader import Reader
+from disk_reader.utils import decode_sfn, decode_lfn, groupby
 
 
 class FATException(Exception):

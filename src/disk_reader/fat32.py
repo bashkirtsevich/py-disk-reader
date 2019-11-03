@@ -1,8 +1,14 @@
 from struct import unpack
-
-from fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
-from signatures import *
-from utils import slice_len
+from collections import namedtuple
+from disk_reader.fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
+from disk_reader.signatures import (
+    FAT32_SIGN,
+    FAT32_ENTRY_PERMS,
+    FAT32_ENTRY,
+    FAT32_LFN,
+    FAT32_ENTRY_SIZE
+)
+from disk_reader.utils import slice_len
 
 SECTOR_SIZE = 512
 

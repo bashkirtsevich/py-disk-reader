@@ -1,8 +1,15 @@
 from struct import unpack
+from collections import namedtuple
 
-from fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
-from signatures import *
-from utils import slice_len
+from disk_reader.fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
+from disk_reader.signatures import (
+    FAT12_SIGN,
+    FAT12_ENTRY_PERMS,
+    FAT12_ENTRY,
+    FAT12_LFN,
+    FAT12_ENTRY_SIZE
+)
+from disk_reader.utils import slice_len
 
 FAT12_STRUCT = namedtuple("FAT12", (it[2] for it in FAT12_SIGN))
 FAT12_ENTRY_STRUCT = namedtuple("FAT12Directory", (it[2] for it in FAT12_ENTRY))
