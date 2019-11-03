@@ -5,8 +5,8 @@ from signatures import *
 from utils import slice_len
 
 FAT12_STRUCT = namedtuple("FAT12", (it[2] for it in FAT12_SIGN))
-FAT_12_ENTRY_STRUCT = namedtuple("FAT12Directory", (it[2] for it in FAT12_ENTRY))
-FAT_12_LFN_STRUCT = namedtuple("FAT12LFN", (it[2] for it in FAT12_LFN))
+FAT12_ENTRY_STRUCT = namedtuple("FAT12Directory", (it[2] for it in FAT12_ENTRY))
+FAT12_LFN_STRUCT = namedtuple("FAT12LFN", (it[2] for it in FAT12_LFN))
 
 
 class FAT12Table(FATTable):
@@ -59,10 +59,10 @@ class FAT12Dir(FATDir):
     def _parse_entry(self, data):
         offset, size, unpack_str = FAT12_ENTRY_PERMS
 
-        return FAT_12_LFN_STRUCT(
+        return FAT12_LFN_STRUCT(
             *(unpack(unpack_str, data[slice_len(offset, size)])[0]
               for offset, size, _, unpack_str in FAT12_LFN)
-        ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else FAT_12_ENTRY_STRUCT(
+        ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else FAT12_ENTRY_STRUCT(
             *(unpack(unpack_str, data[slice_len(offset, size)])[0]
               for offset, size, _, unpack_str in FAT12_ENTRY)
         )
@@ -71,10 +71,10 @@ class FAT12Dir(FATDir):
         return FAT12Entry
 
     def _get_lfn_struct(self):
-        return FAT_12_LFN_STRUCT
+        return FAT12_LFN_STRUCT
 
     def _get_entry_struct(self):
-        return FAT_12_ENTRY_STRUCT
+        return FAT12_ENTRY_STRUCT
 
     def _get_entry_size(self):
         return FAT12_ENTRY_SIZE
@@ -86,7 +86,8 @@ class FAT12Reader(FATReader):
 
         self.boot_sector = self.read_bs()
 
-        self.fats_offset = self.boot_sector.BytesPerSector
+        # self.fats_offset = self.boot_sector.BytesPerSector
+        self.fats_offset = self.boot_sector.SectorsCount * self.boot_sector.BytesPerSector
         self.fats = [
             FAT12Table(
                 self.reader,
