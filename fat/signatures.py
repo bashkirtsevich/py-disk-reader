@@ -1,5 +1,3 @@
-from collections import namedtuple
-
 FAT12_SIGN = (
     # ( offset, size, name, unpack string)
     (0x00, 3, 'JumpInstruction', '3s'),
@@ -58,8 +56,6 @@ FAT12_LFN = (
 )
 
 FAT16_SIGN = FAT12_SIGN
-
-FAT16_STRUCT = namedtuple("FAT16", [it[2] for it in FAT16_SIGN])
 
 FAT16_LFN = FAT12_LFN
 

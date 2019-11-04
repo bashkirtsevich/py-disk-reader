@@ -3,7 +3,7 @@ from itertools import accumulate, takewhile, repeat
 from struct import unpack
 
 from reader import Reader
-from utils import decode_sfn, decode_lfn, groupby, slice_len
+from utils import groupby, slice_len
 
 
 class FATException(Exception):
@@ -25,9 +25,33 @@ class FATEntryNonDirectory(FATEntryError):
 class FATEntryNonFile(FATEntryError):
     pass
 
+# region: Utils
 
 def not_implemented():
     return NotImplementedError("Not implemented")
+
+
+def decode_lfn(data):
+    return (b"".join(
+        takewhile(
+            lambda p: p != b"\x00\x00", (
+                data[i: i + 2] for i in range(0, len(data), 2)
+            )
+        ))
+    ).decode("utf-16-le", errors="replace")
+
+
+def decode_sfn(data):
+    return (b"".join(
+        map(
+            lambda i: i.to_bytes(1, "little"),
+            takewhile(
+                lambda p: p != b"\x00", data
+            )
+        ))
+    ).decode("ascii", errors="replace")
+
+# endregion
 
 
 class FATTable:
@@ -231,11 +255,11 @@ class FATDir:
         return self._get_lfn_struct()(
             *(unpack(unpack_str, data[slice_len(offset, size)])[0]
               for offset, size, _, unpack_str in self._get_lfn())
-        # FIXME: Use named constant instead value
+            # FIXME: Use named constant instead value
         ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else self._get_entry_struct()(
-                *(unpack(unpack_str, data[slice_len(offset, size)])[0]
-                  for offset, size, _, unpack_str in self._get_entry())
-            )
+            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
+              for offset, size, _, unpack_str in self._get_entry())
+        )
 
     def __iter__(self):
         return map(
