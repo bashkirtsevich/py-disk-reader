@@ -1,7 +1,22 @@
+from struct import unpack
 from collections import namedtuple
+from disk_reader.fat import (
+    FATTable,
+    FATEntryReader,
+    FATReader,
+    FATEntry,
+    FATDir,
+    FATBootSector
+)
+from disk_reader.fat.signatures import (
+    FAT32_SIGN,
+    FAT32_ENTRY_PERMS,
+    FAT32_ENTRY,
+    FAT32_LFN,
+    FAT32_ENTRY_SIZE
+)
+from disk_reader.utils import slice_len
 
-from .fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir, FATBootSector
-from .signatures import *
 
 FAT32_STRUCT = namedtuple("FAT32", (it[2] for it in FAT32_SIGN))
 FAT32_ENTRY_STRUCT = namedtuple("FAT32Directory", (it[2] for it in FAT32_ENTRY))

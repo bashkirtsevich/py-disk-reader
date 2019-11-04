@@ -1,3 +1,20 @@
+from collections import namedtuple
+
+__all__ = [
+    'FAT12_SIGN',
+    'FAT12_ENTRY_PERMS',
+    'FAT12_ENTRY',
+    'FAT12_LFN',
+    'FAT16_SIGN',
+    'FAT16_ENTRY_PERMS',
+    'FAT16_ENTRY',
+    'FAT16_LFN',
+    'FAT32_SIGN',
+    'FAT32_ENTRY_PERMS',
+    'FAT32_ENTRY',
+    'FAT32_LFN'
+]
+
 FAT12_SIGN = (
     # ( offset, size, name, unpack string)
     (0x00, 3, 'JumpInstruction', '3s'),

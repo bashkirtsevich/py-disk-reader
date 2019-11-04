@@ -2,8 +2,8 @@ from functools import reduce
 from itertools import accumulate, takewhile, repeat
 from struct import unpack
 
-from reader import Reader
-from utils import groupby, slice_len
+from disk_reader.reader import Reader
+from disk_reader.utils import groupby, slice_len
 
 
 class FATException(Exception):

@@ -2,13 +2,22 @@
 
 TL;DR: Python implementation for low-level disk (and disk images) reading, parse MBR, file systems, etc.
 
+
+# Installation
+py-disk-reader is temporarily unavailable on PyPI. 
+
+Use github link to install:
+```
+pip install git+https://github.com/bashkirtsevich/py-disk-reader
+```
 # Examples
 
 ## FAT12
 
 ```python
 from hashlib import sha1
-from reader import FileReader
+from disk_reader import FAT12Reader
+from disk_reader.reader import FileReader
 
 with open("images/floppy2.img", "rb") as f:
     img = FAT12Reader(FileReader(f))
@@ -37,7 +46,8 @@ with open("images/floppy2.img", "rb") as f:
 
 ```python
 from hashlib import sha1
-from reader import FileReader
+from disk_reader import FAT16Reader
+from disk_reader.reader import FileReader
 
 with open("images/fat16.img", "rb") as f:
     img = FAT16Reader(FileReader(f))
@@ -66,7 +76,8 @@ with open("images/fat16.img", "rb") as f:
 
 ```python
 from hashlib import sha1
-from reader import FileReader
+from disk_reader import FAT32Reader
+from disk_reader.reader import FileReader
 
 with open("images/fat32.img", "rb") as f:
     img = FAT32Reader(FileReader(f))
