@@ -6,7 +6,7 @@ FAT12_SIGN = (
     (0x03, 8, 'OemID', '8s'),
     (0x0B, 2, 'BytesPerSector', '<H'),
     (0x0D, 1, 'SectorsPerCluster', 'B'),
-    (0x0E, 2, 'SectorsCount', '<H'), # FIXME: Reserved Sectors Count # reserved sectors (min 32?)
+    (0x0E, 2, 'SectorsCount', '<H'),  # FIXME: Reserved Sectors Count # reserved sectors (min 32?)
     (0x10, 1, 'FATCopies', 'B'),
     (0x11, 2, 'MaxRootEntries', '<H'),
     (0x13, 2, 'TotalSectors', '<H'),
@@ -22,7 +22,7 @@ FAT12_SIGN = (
     (0x27, 4, 'VolumeID', '<I'),
     (0x2B, 11, 'VolumeLabel', '11s'),
     (0x36, 8, 'FSType', '8s'),
-    #(0x3E, 448, 'BootLoader', '448s'),
+    # (0x3E, 448, 'BootLoader', '448s'),
     (0x1FE, 2, 'BootSignature', '<H')  # 55 AA
 )
 
@@ -43,6 +43,7 @@ FAT12_ENTRY = (
     (0x1A, 2, 'ClusterLo', '<H'),
     (0x1C, 4, 'FileSize', '<I')
 )
+
 FAT12_ENTRY_SIZE = 32
 
 FAT12_LFN = (
@@ -60,14 +61,11 @@ FAT16_SIGN = FAT12_SIGN
 
 FAT16_STRUCT = namedtuple("FAT16", [it[2] for it in FAT16_SIGN])
 
-FAT16_ENTRY = FAT12_ENTRY
-
 FAT16_LFN = FAT12_LFN
 
+FAT16_ENTRY = FAT12_ENTRY
 FAT16_ENTRY_PERMS = FAT12_ENTRY_PERMS
-
 FAT16_ENTRY_SIZE = FAT12_ENTRY_SIZE
-
 
 FAT32_SIGN = (
     (0x00, 3, 'JumpInstruction', '3s'),
@@ -79,7 +77,7 @@ FAT32_SIGN = (
     (0x11, 2, 'MaxRootEntries', '<H'),
     (0x13, 2, 'TotalSectors', '<H'),
     (0x15, 1, 'MediaDescriptor', 'B'),
-    #(0x16, 2, 'SectorsPerFAT', '<H'),  # not used, see 24h instead
+    # (0x16, 2, 'SectorsPerFAT', '<H'),  # not used, see 24h instead
     (0x18, 2, 'SectorsPerTrack', '<H'),
     (0x1A, 2, 'Heads', '<H'),
     (0x1C, 2, 'HiddenSectors', '<H'),
