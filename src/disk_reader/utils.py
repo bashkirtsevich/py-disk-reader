@@ -1,6 +1,3 @@
-from itertools import takewhile
-
-
 class groupby:
     def __init__(self, predicate, iterable):
         self.predicate = predicate
@@ -30,27 +27,6 @@ class groupby:
                 self.curr_val = next_val
             except StopIteration:
                 return
-
-
-def decode_lfn(data):
-    return (b"".join(
-        takewhile(
-            lambda p: p != b"\x00\x00", (
-                data[i: i + 2] for i in range(0, len(data), 2)
-            )
-        ))
-    ).decode("utf-16-le", errors="replace")
-
-
-def decode_sfn(data):
-    return (b"".join(
-        map(
-            lambda i: i.to_bytes(1, "little"),
-            takewhile(
-                lambda p: p != b"\x00", data
-            )
-        ))
-    ).decode("ascii", errors="replace")
 
 
 def slice_len(offset, length):

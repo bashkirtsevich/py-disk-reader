@@ -1,8 +1,9 @@
 from functools import reduce
 from itertools import accumulate, takewhile, repeat
+from struct import unpack
 
 from disk_reader.reader import Reader
-from disk_reader.utils import decode_sfn, decode_lfn, groupby
+from disk_reader.utils import groupby, slice_len
 
 
 class FATException(Exception):
@@ -25,8 +26,34 @@ class FATEntryNonFile(FATEntryError):
     pass
 
 
+# region: Utils
+
 def not_implemented():
     return NotImplementedError("Not implemented")
+
+
+def decode_lfn(data):
+    return (b"".join(
+        takewhile(
+            lambda p: p != b"\x00\x00", (
+                data[i: i + 2] for i in range(0, len(data), 2)
+            )
+        ))
+    ).decode("utf-16-le", errors="replace")
+
+
+def decode_sfn(data):
+    return (b"".join(
+        map(
+            lambda i: i.to_bytes(1, "little"),
+            takewhile(
+                lambda p: p != b"\x00", data
+            )
+        ))
+    ).decode("ascii", errors="replace")
+
+
+# endregion
 
 
 class FATTable:
@@ -97,6 +124,12 @@ class FATEntryReader(Reader):
 
 
 class FATEntry:
+    DOS_PERMS_R = 0x1
+    DOS_PERMS_H = 0x2
+    DOS_PERMS_S = 0x8
+    DOS_PERMS_D = 0x10
+    DOS_PERMS_A = 0x20
+
     def __init__(self, basic_reader, entry_reader, table, cluster_size, params, data_ptr, lfn=None):
         self.basic_reader = basic_reader
         self.reader = entry_reader
@@ -107,11 +140,33 @@ class FATEntry:
         self.data_ptr = data_ptr
         self.entry_reader = self._create_entry_reader()
 
-    def _create_entry_reader(self):
+    @staticmethod
+    def _get_entry_reader_class():
         raise not_implemented()
 
-    def _create_dir_entry(self):
+    @staticmethod
+    def _get_dir_entry_class():
         raise not_implemented()
+
+    def _create_entry_reader(self):
+        return self._get_entry_reader_class()(
+            self.basic_reader,
+            self.table,
+            self.params.ClusterHi << 16 | self.params.ClusterLo,
+            self.cluster_size,
+            self.data_ptr
+        )
+
+    def _create_dir_entry(self):
+        return self._get_dir_entry_class()(
+            self.table,
+            self.basic_reader,
+            self.entry_reader,
+            0,
+            self.entry_reader.size(),
+            self.cluster_size,
+            self.data_ptr
+        )
 
     @property
     def name(self):
@@ -124,23 +179,23 @@ class FATEntry:
 
     @property
     def is_readonly(self):
-        return self.params.DOSPerms & 0x1
+        return self.params.DOSPerms & self.DOS_PERMS_R
 
     @property
     def is_hidden(self):
-        return self.params.DOSPerms & 0x2
+        return self.params.DOSPerms & self.DOS_PERMS_H
 
     @property
     def is_system(self):
-        return self.params.DOSPerms & 0x8
+        return self.params.DOSPerms & self.DOS_PERMS_S
 
     @property
     def is_directory(self):
-        return self.params.DOSPerms & 0x10
+        return self.params.DOSPerms & self.DOS_PERMS_D
 
     @property
     def is_archive(self):
-        return self.params.DOSPerms & 0x20
+        return self.params.DOSPerms & self.DOS_PERMS_A
 
     @property
     def size(self):
@@ -169,20 +224,44 @@ class FATDir:
         self.cluster_size = cluster_size
         self.data_ptr = data_ptr
 
+    @staticmethod
+    def _get_entry_perms():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_lfn():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry_class():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_lfn_struct():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry_struct():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry_size():
+        raise not_implemented()
+
     def _parse_entry(self, data):
-        raise not_implemented()
-
-    def _get_entry_class(self):
-        raise not_implemented()
-
-    def _get_lfn_struct(self):
-        raise not_implemented()
-
-    def _get_entry_struct(self):
-        raise not_implemented()
-
-    def _get_entry_size(self):
-        raise not_implemented()
+        offset, size, unpack_str = self._get_entry_perms()
+        return self._get_lfn_struct()(
+            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
+              for offset, size, _, unpack_str in self._get_lfn())
+            # FIXME: Use named constant instead value
+        ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else self._get_entry_struct()(
+            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
+              for offset, size, _, unpack_str in self._get_entry())
+        )
 
     def __iter__(self):
         return map(
@@ -199,7 +278,7 @@ class FATDir:
                         filter(
                             lambda i: i.SeqNumber != 0xE5 and i.SeqNumber <= 0x4F, g[:-1]
                         ),
-                        key=lambda i: i.SeqNumber & 0x1F
+                        key=lambda i: i.SeqNumber & 0x1F  # FIXME: Replace values to named constants
                     ),
                     None
                 )
@@ -224,9 +303,76 @@ class FATDir:
         )
 
 
+class FATBootSector:
+    def __init__(self, reader):
+        self.data = self._get_struct_class()(
+            *(reader.unpack(unpack_str, size, offset)[0] for offset, size, _, unpack_str in self._get_sign())
+        )
+
+    @staticmethod
+    def _get_sign():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_struct_class():
+        raise not_implemented()
+
+    @property
+    def sector_size(self):
+        return self.data.BytesPerSector
+
+    @property
+    def fats_offset(self):
+        return self.data.SectorsCount * self.data.BytesPerSector
+
+    @property
+    def fats_copies(self):
+        return self.data.FATCopies
+
+    @property
+    def fat_size(self):
+        return self.data.SectorsPerFAT * self.data.BytesPerSector
+
+    @property
+    def cluster_size(self):
+        return self.data.BytesPerSector * self.data.SectorsPerCluster
+
+    @property
+    def data_offset(self):
+        return self.fats_offset + self.fats_copies * self.fat_size
+
+
 class FATReader:
     def __init__(self, reader):
         self.reader = reader
+        self.boot_sector = self.read_boot_sector()
+        self.fats = self.read_fats()
+        self.root_dir = self.read_root()
 
-    def read_bs(self):
+    def read_boot_sector(self):
+        return self._get_boot_sector_class()(self.reader)
+
+    def read_fats(self):
+        return [
+            self._get_fat_table_class()(
+                self.reader,
+                self.boot_sector.fats_offset + i * self.boot_sector.fat_size,
+                self.boot_sector.fat_size
+            ) for i in range(self.boot_sector.fats_copies)
+        ]
+
+    def read_root(self):
         raise not_implemented()
+
+    @property
+    def primary_fat(self):
+        return self.fats[0]
+
+    @staticmethod
+    def _get_boot_sector_class():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_fat_table_class():
+        raise not_implemented()
+

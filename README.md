@@ -15,9 +15,9 @@ pip install git+https://github.com/bashkirtsevich/py-disk-reader
 ## FAT12
 
 ```python
-from disk_reader import FAT12Reader
 from hashlib import sha1
-from reader import FileReader
+from disk_reader import FAT12Reader
+from disk_reader.reader import FileReader
 
 with open("images/floppy2.img", "rb") as f:
     img = FAT12Reader(FileReader(f))
@@ -45,9 +45,9 @@ with open("images/floppy2.img", "rb") as f:
 ## FAT16
 
 ```python
-from disk_reader import FAT16Reader
 from hashlib import sha1
-from reader import FileReader
+from disk_reader import FAT16Reader
+from disk_reader.reader import FileReader
 
 with open("images/fat16.img", "rb") as f:
     img = FAT16Reader(FileReader(f))
@@ -57,7 +57,7 @@ with open("images/fat16.img", "rb") as f:
     for i, n in enumerate(files):
         print(i, n.name)
 
-    bar = files[1]
+    bar = files[15]
     baz = bar.read()
     print(bar.name, sha1(baz).hexdigest(), baz)
 
@@ -67,17 +67,17 @@ with open("images/fat16.img", "rb") as f:
     for i, n in enumerate(bar):
         print(i, n.name)
 
-    baz = bar[7].read()
-    print(bar[7].name, sha1(baz).hexdigest(), baz)
+    baz = bar[3].read()
+    print(bar[3].name, sha1(baz).hexdigest(), baz)
 
 ```
 
 ## FAT32
 
 ```python
-from disk_reader import FAT32Reader
 from hashlib import sha1
-from reader import FileReader
+from disk_reader import FAT32Reader
+from disk_reader.reader import FileReader
 
 with open("images/fat32.img", "rb") as f:
     img = FAT32Reader(FileReader(f))
