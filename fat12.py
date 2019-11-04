@@ -1,8 +1,5 @@
-from struct import unpack
-
 from fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
 from signatures import *
-from utils import slice_len
 
 FAT12_STRUCT = namedtuple("FAT12", (it[2] for it in FAT12_SIGN))
 FAT12_ENTRY_STRUCT = namedtuple("FAT12Directory", (it[2] for it in FAT12_ENTRY))
@@ -29,54 +26,47 @@ class FAT12Table(FATTable):
         return not (self.FAT12_ENTRY_START <= val <= self.FAT12_ENTRY_END)
 
 
-class Fat12EntryReader(FATEntryReader):
+class FAT12EntryReader(FATEntryReader):
     pass
 
 
 class FAT12Entry(FATEntry):
-    def _create_entry_reader(self):
-        return Fat12EntryReader(
-            self.basic_reader,
-            self.table,
-            self.params.ClusterHi << 16 | self.params.ClusterLo,
-            self.cluster_size,
-            self.data_ptr
-        )
+    @staticmethod
+    def _get_entry_reader_class():
+        return FAT12EntryReader
 
-    def _create_dir_entry(self):
-        return FAT12Dir(
-            self.table,
-            self.basic_reader,
-            self.entry_reader,
-            0,
-            self.entry_reader.size(),
-            self.cluster_size,
-            self.data_ptr
-        )
+    @staticmethod
+    def _get_dir_entry_class():
+        return FAT12Dir
 
 
 class FAT12Dir(FATDir):
-    def _parse_entry(self, data):
-        offset, size, unpack_str = FAT12_ENTRY_PERMS
+    @staticmethod
+    def _get_entry_perms():
+        return FAT12_ENTRY_PERMS
 
-        return FAT12_LFN_STRUCT(
-            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
-              for offset, size, _, unpack_str in FAT12_LFN)
-        ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else FAT12_ENTRY_STRUCT(
-            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
-              for offset, size, _, unpack_str in FAT12_ENTRY)
-        )
+    @staticmethod
+    def _get_lfn():
+        return FAT12_LFN
 
-    def _get_entry_class(self):
+    @staticmethod
+    def _get_entry():
+        return FAT12_ENTRY
+
+    @staticmethod
+    def _get_entry_class():
         return FAT12Entry
 
-    def _get_lfn_struct(self):
+    @staticmethod
+    def _get_lfn_struct():
         return FAT12_LFN_STRUCT
 
-    def _get_entry_struct(self):
+    @staticmethod
+    def _get_entry_struct():
         return FAT12_ENTRY_STRUCT
 
-    def _get_entry_size(self):
+    @staticmethod
+    def _get_entry_size():
         return FAT12_ENTRY_SIZE
 
 

@@ -1,8 +1,5 @@
-from struct import unpack
-
 from fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
 from signatures import *
-from utils import slice_len
 
 SECTOR_SIZE = 512
 
@@ -36,49 +33,42 @@ class FAT16EntryReader(FATEntryReader):
 
 
 class FAT16Entry(FATEntry):
-    def _create_entry_reader(self):
-        return FAT16EntryReader(
-            self.basic_reader,
-            self.table,
-            self.params.ClusterHi << 16 | self.params.ClusterLo,
-            self.cluster_size,
-            self.data_ptr
-        )
+    @staticmethod
+    def _get_entry_reader_class():
+        return FAT16EntryReader
 
-    def _create_dir_entry(self):
-        return FAT16Dir(
-            self.table,
-            self.basic_reader,
-            self.entry_reader,
-            0,
-            self.entry_reader.size(),
-            self.cluster_size,
-            self.data_ptr
-        )
+    @staticmethod
+    def _get_dir_entry_class():
+        return FAT16Dir
 
 
 class FAT16Dir(FATDir):
-    def _parse_entry(self, data):
-        offset, size, unpack_str = FAT16_ENTRY_PERMS
+    @staticmethod
+    def _get_entry_perms():
+        return FAT16_ENTRY_PERMS
 
-        return FAT16_LFN_STRUCT(
-            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
-              for offset, size, _, unpack_str in FAT16_LFN)
-        ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else FAT16_ENTRY_STRUCT(
-            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
-              for offset, size, _, unpack_str in FAT16_ENTRY)
-        )
+    @staticmethod
+    def _get_lfn():
+        return FAT16_LFN
 
-    def _get_entry_class(self):
+    @staticmethod
+    def _get_entry():
+        return FAT16_ENTRY
+
+    @staticmethod
+    def _get_entry_class():
         return FAT16Entry
 
-    def _get_lfn_struct(self):
+    @staticmethod
+    def _get_lfn_struct():
         return FAT16_LFN_STRUCT
 
-    def _get_entry_struct(self):
+    @staticmethod
+    def _get_entry_struct():
         return FAT16_ENTRY_STRUCT
 
-    def _get_entry_size(self):
+    @staticmethod
+    def _get_entry_size():
         return FAT16_ENTRY_SIZE
 
 

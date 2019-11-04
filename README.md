@@ -36,29 +36,29 @@ with open("images/floppy2.img", "rb") as f:
 ## FAT16
 
 ```python
-    from hashlib import sha1
-    from reader import FileReader
+from hashlib import sha1
+from reader import FileReader
 
-    with open("images/fat16.img", "rb") as f:
-        img = FAT16Reader(FileReader(f))
+with open("images/fat16.img", "rb") as f:
+    img = FAT16Reader(FileReader(f))
 
-        files = list(img.root_dir)
+    files = list(img.root_dir)
 
-        for i, n in enumerate(files):
-            print(i, n.name)
+    for i, n in enumerate(files):
+        print(i, n.name)
 
-        bar = files[1]
-        baz = bar.read()
-        print(bar.name, sha1(baz).hexdigest(), baz)
+    bar = files[15]
+    baz = bar.read()
+    print(bar.name, sha1(baz).hexdigest(), baz)
 
-        print("----")
+    print("----")
 
-        bar = list(files[0])
-        for i, n in enumerate(bar):
-            print(i, n.name)
+    bar = list(files[0])
+    for i, n in enumerate(bar):
+        print(i, n.name)
 
-        baz = bar[7].read()
-        print(bar[7].name, sha1(baz).hexdigest(), baz)
+    baz = bar[3].read()
+    print(bar[3].name, sha1(baz).hexdigest(), baz)
 
 ```
 

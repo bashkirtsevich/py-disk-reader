@@ -1,8 +1,9 @@
 from functools import reduce
 from itertools import accumulate, takewhile, repeat
+from struct import unpack
 
 from reader import Reader
-from utils import decode_sfn, decode_lfn, groupby
+from utils import decode_sfn, decode_lfn, groupby, slice_len
 
 
 class FATException(Exception):
@@ -97,6 +98,12 @@ class FATEntryReader(Reader):
 
 
 class FATEntry:
+    DOS_PERMS_R = 0x1
+    DOS_PERMS_H = 0x2
+    DOS_PERMS_S = 0x8
+    DOS_PERMS_D = 0x10
+    DOS_PERMS_A = 0x20
+
     def __init__(self, basic_reader, entry_reader, table, cluster_size, params, data_ptr, lfn=None):
         self.basic_reader = basic_reader
         self.reader = entry_reader
@@ -107,11 +114,33 @@ class FATEntry:
         self.data_ptr = data_ptr
         self.entry_reader = self._create_entry_reader()
 
-    def _create_entry_reader(self):
+    @staticmethod
+    def _get_entry_reader_class():
         raise not_implemented()
 
-    def _create_dir_entry(self):
+    @staticmethod
+    def _get_dir_entry_class():
         raise not_implemented()
+
+    def _create_entry_reader(self):
+        return self._get_entry_reader_class()(
+            self.basic_reader,
+            self.table,
+            self.params.ClusterHi << 16 | self.params.ClusterLo,
+            self.cluster_size,
+            self.data_ptr
+        )
+
+    def _create_dir_entry(self):
+        return self._get_dir_entry_class()(
+            self.table,
+            self.basic_reader,
+            self.entry_reader,
+            0,
+            self.entry_reader.size(),
+            self.cluster_size,
+            self.data_ptr
+        )
 
     @property
     def name(self):
@@ -124,23 +153,23 @@ class FATEntry:
 
     @property
     def is_readonly(self):
-        return self.params.DOSPerms & 0x1
+        return self.params.DOSPerms & self.DOS_PERMS_R
 
     @property
     def is_hidden(self):
-        return self.params.DOSPerms & 0x2
+        return self.params.DOSPerms & self.DOS_PERMS_H
 
     @property
     def is_system(self):
-        return self.params.DOSPerms & 0x8
+        return self.params.DOSPerms & self.DOS_PERMS_S
 
     @property
     def is_directory(self):
-        return self.params.DOSPerms & 0x10
+        return self.params.DOSPerms & self.DOS_PERMS_D
 
     @property
     def is_archive(self):
-        return self.params.DOSPerms & 0x20
+        return self.params.DOSPerms & self.DOS_PERMS_A
 
     @property
     def size(self):
@@ -169,20 +198,44 @@ class FATDir:
         self.cluster_size = cluster_size
         self.data_ptr = data_ptr
 
+    @staticmethod
+    def _get_entry_perms():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_lfn():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry_class():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_lfn_struct():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry_struct():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_entry_size():
+        raise not_implemented()
+
     def _parse_entry(self, data):
-        raise not_implemented()
-
-    def _get_entry_class(self):
-        raise not_implemented()
-
-    def _get_lfn_struct(self):
-        raise not_implemented()
-
-    def _get_entry_struct(self):
-        raise not_implemented()
-
-    def _get_entry_size(self):
-        raise not_implemented()
+        offset, size, unpack_str = self._get_entry_perms()
+        return self._get_lfn_struct()(
+            *(unpack(unpack_str, data[slice_len(offset, size)])[0]
+              for offset, size, _, unpack_str in self._get_lfn())
+        # FIXME: Use named constant instead value
+        ) if unpack(unpack_str, data[slice_len(offset, size)])[0] == 0xF else self._get_entry_struct()(
+                *(unpack(unpack_str, data[slice_len(offset, size)])[0]
+                  for offset, size, _, unpack_str in self._get_entry())
+            )
 
     def __iter__(self):
         return map(
@@ -199,7 +252,7 @@ class FATDir:
                         filter(
                             lambda i: i.SeqNumber != 0xE5 and i.SeqNumber <= 0x4F, g[:-1]
                         ),
-                        key=lambda i: i.SeqNumber & 0x1F
+                        key=lambda i: i.SeqNumber & 0x1F  # FIXME: Replace values to named constants
                     ),
                     None
                 )
