@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from .fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
+from .fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir, FATBootSector
 from .signatures import *
 
 FAT32_STRUCT = namedtuple("FAT32", (it[2] for it in FAT32_SIGN))
@@ -72,48 +72,43 @@ class FAT32Dir(FATDir):
         return FAT32_ENTRY_SIZE
 
 
+class FAT32BootSector(FATBootSector):
+    @property
+    def root_cluster(self):
+        return self.data.RootCluster
+
+    @staticmethod
+    def _get_sign():
+        return FAT32_SIGN
+
+    @staticmethod
+    def _get_struct_class():
+        return FAT32_STRUCT
+
+
 class FAT32Reader(FATReader):
-    def __init__(self, reader):
-        super().__init__(reader)
-
-        self.boot_sector = self.read_bs()
-
-        self.fats_offset = self.boot_sector.SectorsCount * self.boot_sector.BytesPerSector
-        self.fats = [
-            FAT32Table(
-                self.reader,
-                self.fats_offset + i * self.boot_sector.SectorsPerFAT * self.boot_sector.BytesPerSector,
-                self.boot_sector.SectorsPerFAT * self.boot_sector.BytesPerSector
-            ) for i in range(self.boot_sector.FATCopies)
-        ]
-        self.data_offset = self.fats_offset + self.boot_sector.FATCopies * self.boot_sector.SectorsPerFAT * self.boot_sector.BytesPerSector
-        self.cluster_size = self.boot_sector.BytesPerSector * self.boot_sector.SectorsPerCluster
-
+    def read_root(self):
         root_reader = FAT32EntryReader(
             self.reader,
-            self.fats[0],
-            self.boot_sector.RootCluster,
-            self.cluster_size,
-            self.data_offset
+            self.primary_fat,
+            self.boot_sector.root_cluster,
+            self.boot_sector.cluster_size,
+            self.boot_sector.data_offset
         )
-        self.root_dir = FAT32Dir(
-            self.fats[0],
+        return FAT32Dir(
+            self.primary_fat,
             self.reader,
             root_reader,
             0,
             root_reader.size(),
-            self.cluster_size,
-            self.data_offset
+            self.boot_sector.cluster_size,
+            self.boot_sector.data_offset
         )
 
-    def read_bs(self):
-        return FAT32_STRUCT(
-            *(
-                self.reader.unpack(unpack_str, size, offset)[0]
-                for offset, size, _, unpack_str in FAT32_SIGN
-            )
-        )
+    @staticmethod
+    def _get_boot_sector_class():
+        return FAT32BootSector
 
-    @property
-    def root(self):
-        return self.root_dir
+    @staticmethod
+    def _get_fat_table_class():
+        return FAT32Table

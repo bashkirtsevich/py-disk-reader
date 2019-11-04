@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from .fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
+from .fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir, FATBootSector
 from .signatures import *
 
 FAT16_STRUCT = namedtuple("FAT16", (it[2] for it in FAT16_SIGN))
@@ -72,41 +72,48 @@ class FAT16Dir(FATDir):
         return FAT16_ENTRY_SIZE
 
 
-class FAT16Reader(FATReader):
-    def __init__(self, reader):
-        super().__init__(reader)
-
-        self.boot_sector = self.read_bs()
-
-        self.fats_offset = self.boot_sector.SectorsCount * self.boot_sector.BytesPerSector
-        self.fats = [
-            FAT16Table(
-                self.reader,
-                self.fats_offset + i * self.boot_sector.SectorsPerFAT * self.boot_sector.BytesPerSector,
-                self.boot_sector.SectorsPerFAT * self.boot_sector.BytesPerSector
-            ) for i in range(self.boot_sector.FATCopies)
-        ]
-        self.root_dir_offset = self.fats_offset + self.boot_sector.FATCopies * self.boot_sector.SectorsPerFAT * self.boot_sector.BytesPerSector
-        self.data_offset = self.root_dir_offset + self.boot_sector.MaxRootEntries * FAT12_ENTRY_SIZE
-        self.cluster_size = self.boot_sector.BytesPerSector * self.boot_sector.SectorsPerCluster
-
-        self.root_dir = FAT16Dir(
-            self.fats[0],
-            self.reader, self.reader,
-            self.root_dir_offset,
-            self.boot_sector.MaxRootEntries * FAT12_ENTRY_SIZE,
-            self.cluster_size,
-            self.data_offset
-        )
-
-    def read_bs(self):
-        return FAT16_STRUCT(
-            *(
-                self.reader.unpack(unpack_str, size, offset)[0]
-                for offset, size, _, unpack_str in FAT16_SIGN
-            )
-        )
+class FAT16BootSector(FATBootSector):
+    @property
+    def max_root_entries(self):
+        return self.data.MaxRootEntries  # FIXME: Same as in FAT12
 
     @property
-    def root(self):
-        return self.root_dir
+    def root_size(self):
+        return self.max_root_entries * FAT16_ENTRY_SIZE
+
+    @property
+    def root_dir_offset(self):
+        return self.fats_offset + self.fats_copies * self.fat_size  # FIXME: Same as in FAT12
+
+    @property
+    def data_offset(self):
+        return super().data_offset + self.root_size  # FIXME: Same as in FAT12
+
+    @staticmethod
+    def _get_sign():
+        return FAT16_SIGN
+
+    @staticmethod
+    def _get_struct_class():
+        return FAT16_STRUCT
+
+
+class FAT16Reader(FATReader):
+    def read_root(self):
+        return FAT16Dir(  # FIXME: Same as in FAT12
+            self.primary_fat,
+            self.reader,
+            self.reader,
+            self.boot_sector.root_dir_offset,
+            self.boot_sector.root_size,
+            self.boot_sector.cluster_size,
+            self.boot_sector.data_offset
+        )
+
+    @staticmethod
+    def _get_boot_sector_class():
+        return FAT16BootSector
+
+    @staticmethod
+    def _get_fat_table_class():
+        return FAT16Table

@@ -25,6 +25,7 @@ class FATEntryNonDirectory(FATEntryError):
 class FATEntryNonFile(FATEntryError):
     pass
 
+
 # region: Utils
 
 def not_implemented():
@@ -50,6 +51,7 @@ def decode_sfn(data):
             )
         ))
     ).decode("ascii", errors="replace")
+
 
 # endregion
 
@@ -301,9 +303,76 @@ class FATDir:
         )
 
 
+class FATBootSector:
+    def __init__(self, reader):
+        self.data = self._get_struct_class()(
+            *(reader.unpack(unpack_str, size, offset)[0] for offset, size, _, unpack_str in self._get_sign())
+        )
+
+    @staticmethod
+    def _get_sign():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_struct_class():
+        raise not_implemented()
+
+    @property
+    def sector_size(self):
+        return self.data.BytesPerSector
+
+    @property
+    def fats_offset(self):
+        return self.data.SectorsCount * self.data.BytesPerSector
+
+    @property
+    def fats_copies(self):
+        return self.data.FATCopies
+
+    @property
+    def fat_size(self):
+        return self.data.SectorsPerFAT * self.data.BytesPerSector
+
+    @property
+    def cluster_size(self):
+        return self.data.BytesPerSector * self.data.SectorsPerCluster
+
+    @property
+    def data_offset(self):
+        return self.fats_offset + self.fats_copies * self.fat_size
+
+
 class FATReader:
     def __init__(self, reader):
         self.reader = reader
+        self.boot_sector = self.read_boot_sector()
+        self.fats = self.read_fats()
+        self.root_dir = self.read_root()
 
-    def read_bs(self):
+    def read_boot_sector(self):
+        return self._get_boot_sector_class()(self.reader)
+
+    def read_fats(self):
+        return [
+            self._get_fat_table_class()(
+                self.reader,
+                self.boot_sector.fats_offset + i * self.boot_sector.fat_size,
+                self.boot_sector.fat_size
+            ) for i in range(self.boot_sector.fats_copies)
+        ]
+
+    def read_root(self):
         raise not_implemented()
+
+    @property
+    def primary_fat(self):
+        return self.fats[0]
+
+    @staticmethod
+    def _get_boot_sector_class():
+        raise not_implemented()
+
+    @staticmethod
+    def _get_fat_table_class():
+        raise not_implemented()
+
