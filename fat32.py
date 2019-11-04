@@ -1,8 +1,6 @@
 from fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
 from signatures import *
 
-SECTOR_SIZE = 512
-
 FAT32_STRUCT = namedtuple("FAT32", (it[2] for it in FAT32_SIGN))
 FAT32_ENTRY_STRUCT = namedtuple("FAT32Directory", (it[2] for it in FAT32_ENTRY))
 FAT32_LFN_STRUCT = namedtuple("FAT32LFN", (it[2] for it in FAT32_LFN))

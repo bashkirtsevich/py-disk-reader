@@ -1,8 +1,6 @@
 from fat import FATTable, FATEntryReader, FATReader, FATEntry, FATDir
 from signatures import *
 
-SECTOR_SIZE = 512
-
 FAT16_STRUCT = namedtuple("FAT16", (it[2] for it in FAT16_SIGN))
 FAT16_ENTRY_STRUCT = namedtuple("FAT16Directory", (it[2] for it in FAT16_ENTRY))
 FAT16_LFN_STRUCT = namedtuple("FAT16LFN", (it[2] for it in FAT16_LFN))
